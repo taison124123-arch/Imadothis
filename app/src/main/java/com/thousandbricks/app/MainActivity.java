@@ -39,12 +39,6 @@ public class MainActivity extends Activity {
         Window window = getWindow();
         window.setStatusBarColor(Color.rgb(16, 19, 28));
         window.setNavigationBarColor(Color.rgb(16, 19, 28));
-        if (android.os.Build.VERSION.SDK_INT >= 30) {
-            WindowInsetsController controller = window.getInsetsController();
-            if (controller != null) {
-                controller.setSystemBarsAppearance(0, WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS);
-            }
-        }
         setContentView(new BricksView(this));
     }
 

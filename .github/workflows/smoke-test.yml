@@ -1,0 +1,46 @@
+name: Android launch smoke test
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Build APK
+        run: gradle :app:assembleDebug --stacktrace
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Launch app in Android emulator
+        uses: ReactiveCircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          script: |
+            adb install -r app/build/outputs/apk/debug/app-debug.apk
+            adb logcat -c
+            adb shell am force-stop com.thousandbricks.app
+            adb shell am start -W -n com.thousandbricks.app/.MainActivity
+            sleep 5
+            echo "=== PID ==="
+            adb shell pidof com.thousandbricks.app || true
+            echo "=== CRASH LOG ==="
+            adb logcat -d -b crash -v time || true
+            if ! adb shell pidof com.thousandbricks.app >/dev/null; then
+              echo "APP_CRASHED"
+              exit 1
+            fi
